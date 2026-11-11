@@ -14,7 +14,7 @@ class ParsicApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'PARSIC',
+      title: 'هخامنش',
       theme: ThemeData(
         useMaterial3: true,
         brightness: Brightness.dark,
@@ -41,7 +41,7 @@ class _ParsicHomeState extends State<ParsicHome> {
   final search = TextEditingController();
 
   String output = '';
-  String mode = 'فارسی به پارسیک';
+  String mode = 'فارسی به هخامنش';
   int page = 0;
 
   static const Map<String, String> alphabet = {
@@ -121,7 +121,7 @@ class _ParsicHomeState extends State<ParsicHome> {
     for (final rune in runes) {
       final char = String.fromCharCode(rune);
 
-      if (mode == 'فارسی به پارسیک') {
+      if (mode == 'فارسی به هخامنش') {
         result.write(alphabet[char] ?? char);
       } else {
         result.write(reverse[char] ?? char);
@@ -167,13 +167,13 @@ class _ParsicHomeState extends State<ParsicHome> {
         ),
         const SizedBox(height: 8),
         const Text(
-          'زبان پارسیک',
+          'زبان هخامنش',
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
         const Text(
-          'PARSIC LANGUAGE PROJECT',
+          'HAKHAMANESH LANGUAGE PROJECT',
           textAlign: TextAlign.center,
           style: TextStyle(color: Colors.amber, letterSpacing: 2),
         ),
@@ -186,12 +186,12 @@ class _ParsicHomeState extends State<ParsicHome> {
           ),
           items: const [
             DropdownMenuItem(
-              value: 'فارسی به پارسیک',
-              child: Text('فارسی به پارسیک'),
+              value: 'فارسی به هخامنش',
+              child: Text('فارسی به هخامنش'),
             ),
             DropdownMenuItem(
-              value: 'پارسیک به فارسی',
-              child: Text('پارسیک به فارسی'),
+              value: 'هخامنش به فارسی',
+              child: Text('هخامنش به فارسی'),
             ),
           ],
           onChanged: (value) {
@@ -231,7 +231,7 @@ class _ParsicHomeState extends State<ParsicHome> {
           ),
           child: Column(
             children: [
-              const Text('خروجی پارسیک'),
+              const Text('خروجی هخامنش'),
               const SizedBox(height: 18),
               SelectableText(
                 output.isEmpty ? '𐎱𐎠𐎼𐎿𐎡𐎣' : output,
@@ -252,7 +252,7 @@ class _ParsicHomeState extends State<ParsicHome> {
         OutlinedButton.icon(
           onPressed: openKeyboard,
           icon: const Icon(Icons.keyboard),
-          label: const Text('انتخاب صفحه‌کلید پارسیک'),
+          label: const Text('انتخاب صفحه‌کلید هخامنش'),
         ),
         const SizedBox(height: 12),
         const Text(
@@ -318,7 +318,7 @@ class _ParsicHomeState extends State<ParsicHome> {
       padding: const EdgeInsets.all(18),
       children: [
         const Text(
-          'الفبای پارسیک',
+          'الفبای هخامنش',
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 25),
         ),
@@ -373,7 +373,7 @@ class _ParsicHomeState extends State<ParsicHome> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          '𐎱𐎠𐎼𐎿𐎡𐎣  PARSIC',
+          '𐎠𐎡𐎢𐎣  هخامنش',
           style: TextStyle(color: Color(0xFFD5AC5B)),
         ),
         centerTitle: true,

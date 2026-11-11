@@ -2,56 +2,141 @@ package com.parsic.parsic
 
 import android.inputmethodservice.InputMethodService
 import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
+import android.view.Gravity
+import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
 import android.widget.LinearLayout
+import android.widget.TextView
 
 class ParsicKeyboardService : InputMethodService() {
 
-    private val rows = listOf(
-        listOf("𐎠","𐎡","𐎢","𐎣","𐎤","𐎥"),
-        listOf("𐎦","𐎧","𐎨","𐎩","𐎪","𐎫"),
-        listOf("𐎬","𐎭","𐎮","𐎯","𐎰","𐎱"),
-        listOf("𐎲","𐎳","𐎴","𐎵","𐎶","𐎷"),
-        listOf("𐎸","𐎹","𐎺","𐎻","𐎼","𐎽"),
-        listOf("𐎾","𐎿","⌫","،",".","؟"),
-        listOf("فاصله","↵")
+    data class Key(
+        val glyph: String,
+        val hint: String = "",
+        val value: String = glyph,
+        val action: String = "text",
+        val weight: Float = 1f
     )
+
+    private fun k(g: String, p: String) = Key(g, p)
+
+    private val rows = listOf(
+        listOf(
+            k("𐎠","ا"), k("𐎡","ب"), k("𐎢","پ"),
+            k("𐎣","ت"), k("𐎤","ث"), k("𐎥","ج")
+        ),
+        listOf(
+            k("𐎦","چ"), k("𐎧","ح"), k("𐎨","خ"),
+            k("𐎩","د"), k("𐎪","ذ"), k("𐎫","ر")
+        ),
+        listOf(
+            k("𐎬","ز"), k("𐎭","ژ"), k("𐎮","س"),
+            k("𐎯","ش"), k("𐎰","ص"), k("𐎱","ض")
+        ),
+        listOf(
+            k("𐎲","ط"), k("𐎳","ظ"), k("𐎴","ع"),
+            k("𐎵","غ"), k("𐎶","ف"), k("𐎷","ق")
+        ),
+        listOf(
+            k("𐎸","ک"), k("𐎹","گ"), k("𐎺","ل"),
+            k("𐎻","م"), k("𐎼","ن"), k("𐎽","و")
+        ),
+        listOf(
+            k("𐎾","ه"), k("𐎿","ی")
+        ),
+        listOf(
+            Key("،","ویرگول","،"),
+            Key(".","نقطه","."),
+            Key("؟","پرسش","؟"),
+            Key("⌫","حذف",action="backspace"),
+            Key("فاصله","فاصله"," ", "space", 2.5f),
+            Key("↵","سطر بعد",action="enter")
+        )
+    )
+
+    private fun dp(value: Int): Int =
+        (value * resources.displayMetrics.density).toInt()
 
     override fun onCreateInputView(): View {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(Color.rgb(20,20,25))
-            setPadding(4,6,4,6)
+            setPadding(dp(4), dp(5), dp(4), dp(5))
+            setBackgroundColor(Color.rgb(20, 20, 25))
         }
 
-        for (row in rows) {
+        rows.forEach { row ->
             val line = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
             }
 
-            for (key in row) {
-                val button = Button(this).apply {
-                    text = key
-                    textSize = if (key == "فاصله") 12f else 21f
-                    setTextColor(Color.WHITE)
-                    setBackgroundColor(Color.rgb(75,62,43))
-                    isAllCaps = false
-                    setPadding(0,0,0,0)
+            row.forEach { key ->
+                val cell = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    gravity = Gravity.CENTER
+                    isClickable = true
+                    isFocusable = true
+
+                    background = GradientDrawable().apply {
+                        setColor(Color.rgb(72, 58, 40))
+                        cornerRadius = dp(6).toFloat()
+                        setStroke(dp(1), Color.rgb(135, 105, 62))
+                    }
+
+                    setPadding(dp(1), dp(2), dp(1), dp(2))
                 }
 
-                val params = LinearLayout.LayoutParams(0,48,1f)
-                params.setMargins(2,2,2,2)
-                line.addView(button,params)
+                val top = TextView(this).apply {
+                    text = key.glyph
+                    gravity = Gravity.CENTER
+                    textSize = if (key.action == "text") 22f else 13f
+                    setTextColor(Color.WHITE)
+                }
 
-                button.setOnClickListener {
-                    val connection = currentInputConnection ?: return@setOnClickListener
-                    when (key) {
-                        "⌫" -> connection.deleteSurroundingTextInCodePoints(1,0)
-                        "فاصله" -> connection.commitText(" ",1)
-                        "↵" -> connection.commitText("\n",1)
-                        else -> connection.commitText(key,1)
+                val bottom = TextView(this).apply {
+                    text = key.hint
+                    gravity = Gravity.CENTER
+                    textSize = 10f
+                    setTextColor(Color.rgb(255, 213, 145))
+                }
+
+                cell.addView(
+                    top,
+                    LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, 0, 1.2f
+                    )
+                )
+
+                cell.addView(
+                    bottom,
+                    LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, 0, 0.7f
+                    )
+                )
+
+                val params = LinearLayout.LayoutParams(
+                    0, dp(47), key.weight
+                )
+                params.setMargins(dp(2), dp(2), dp(2), dp(2))
+                line.addView(cell, params)
+
+                cell.setOnClickListener {
+                    val connection = currentInputConnection
+                        ?: return@setOnClickListener
+
+                    when (key.action) {
+                        "backspace" ->
+                            connection.deleteSurroundingTextInCodePoints(1, 0)
+
+                        "space" ->
+                            connection.commitText(" ", 1)
+
+                        "enter" ->
+                            connection.commitText("\n", 1)
+
+                        else ->
+                            connection.commitText(key.value, 1)
                     }
                 }
             }
@@ -64,6 +149,7 @@ class ParsicKeyboardService : InputMethodService() {
                 )
             )
         }
+
         return root
     }
 }

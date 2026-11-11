@@ -1,4 +1,4 @@
-name: PARSIC Android Build
+name: HAKHAMANESH Android Build
 
 on:
   workflow_dispatch:
@@ -27,9 +27,10 @@ jobs:
       - name: Create Android project
         run: flutter create --org com.parsic --project-name parsic --platforms android .
 
-      - name: Install PARSIC keyboard
+      - name: Install HAKHAMANESH keyboard
         run: |
           mkdir -p android/app/src/main/res/xml
+          mkdir -p android/app/src/main/res/values
           mkdir -p android/app/src/main/kotlin/com/parsic/parsic
 
           cp native/kotlin/ParsicKeyboardService.kt \
@@ -38,16 +39,42 @@ jobs:
           cp native/res/xml/method.xml \
             android/app/src/main/res/xml/method.xml
 
+          cp native/res/values/strings.xml \
+            android/app/src/main/res/values/strings.xml
+
           python3 - <<'PY'
           from pathlib import Path
+          import re
 
           p = Path("android/app/src/main/AndroidManifest.xml")
           s = p.read_text()
 
-          service = '''
+          app_match = re.search(r'<application\b[^>]*>', s)
+          if not app_match:
+              raise SystemExit("Android application tag not found")
+
+          app_tag = app_match.group(0)
+          if re.search(r'android:label="[^"]*"', app_tag):
+              app_tag = re.sub(
+                  r'android:label="[^"]*"',
+                  'android:label="@string/app_name"',
+                  app_tag
+              )
+          else:
+              app_tag = app_tag[:-1] + ' android:label="@string/app_name">'
+
+          s = s[:app_match.start()] + app_tag + s[app_match.end():]
+
+          s = re.sub(
+              r'\s*<service\b(?=[^>]*ParsicKeyboardService)[\s\S]*?</service>',
+              '',
+              s
+          )
+
+          service = """
               <service
                   android:name="com.parsic.parsic.ParsicKeyboardService"
-                  android:label="صفحه‌کلید پارسیک"
+                  android:label="@string/ime_name"
                   android:permission="android.permission.BIND_INPUT_METHOD"
                   android:exported="true">
                   <intent-filter>
@@ -57,14 +84,14 @@ jobs:
                       android:name="android.view.im"
                       android:resource="@xml/method" />
               </service>
-          '''
+          """
 
-          if "ParsicKeyboardService" not in s:
-              s = s.replace("</application>", service + "\\n</application>")
-
+          s = s.replace("</application>", service + "\n</application>")
           p.write_text(s)
 
-          main = Path("android/app/src/main/kotlin/com/parsic/parsic/MainActivity.kt")
+          main = Path(
+              "android/app/src/main/kotlin/com/parsic/parsic/MainActivity.kt"
+          )
           main.parent.mkdir(parents=True, exist_ok=True)
 
           main.write_text('''package com.parsic.parsic
@@ -78,6 +105,7 @@ jobs:
           class MainActivity: FlutterActivity() {
               override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
                   super.configureFlutterEngine(flutterEngine)
+
                   MethodChannel(
                       flutterEngine.dartExecutor.binaryMessenger,
                       "parsic/keyboard"
@@ -104,6 +132,6 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: PARSIC-Android-APK
+          name: HAKHAMANESH-Android-APK
           path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
