@@ -3,12 +3,17 @@ package com.parsic.parsic
 import android.inputmethodservice.InputMethodService
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
+import android.os.Build
 import android.view.Gravity
+import android.view.View
 import android.view.ViewGroup
+import android.view.WindowInsets
 import android.widget.LinearLayout
 import android.widget.TextView
 
 class ParsicKeyboardService : InputMethodService() {
+
+    private var persianMode = false
 
     data class KeySpec(
         val glyph: String,
@@ -55,11 +60,13 @@ class ParsicKeyboardService : InputMethodService() {
     )
 
     private fun letter(value: String): KeySpec {
-        return KeySpec(
-            glyph = glyphs[value] ?: value,
-            hint = value,
-            value = glyphs[value] ?: value
-        )
+        val glyph = glyphs[value] ?: value
+
+        return if (persianMode) {
+            KeySpec(value, "", value)
+        } else {
+            KeySpec(glyph, value, glyph)
+        }
     }
 
     private fun special(
@@ -69,13 +76,6 @@ class ParsicKeyboardService : InputMethodService() {
         action: String = "text",
         weight: Float = 1f
     ) = KeySpec(glyph, hint, value, action, weight)
-
-    private val rows = listOf(
-        "ض ص ث ق ف غ ع ه خ ح ج چ".split(" ").map { letter(it) },
-        "ش س ی ب ل ا ت ن م ک گ".split(" ").map { letter(it) },
-        "ظ ط ز ر ذ د ئ و پ".split(" ").map { letter(it) } +
-            special("⌫", "حذف", action = "backspace", weight = 1.35f)
-    )
 
     private fun dp(v: Int): Int =
         (v * resources.displayMetrics.density).toInt()
@@ -96,9 +96,8 @@ class ParsicKeyboardService : InputMethodService() {
         val top = TextView(this).apply {
             text = key.glyph
             gravity = Gravity.CENTER
-            textSize = if (key.action == "text") 21f else 15f
+            textSize = if (key.action == "text") 21f else 14f
             setTextColor(Color.WHITE)
-            includeFontPadding = true
         }
 
         val bottom = TextView(this).apply {
@@ -126,10 +125,22 @@ class ParsicKeyboardService : InputMethodService() {
             val input = currentInputConnection ?: return@setOnClickListener
 
             when (key.action) {
-                "backspace" -> input.deleteSurroundingText(1, 0)
-                "space" -> input.commitText(" ", 1)
-                "enter" -> input.commitText("\n", 1)
-                else -> input.commitText(key.value, 1)
+                "backspace" ->
+                    input.deleteSurroundingTextInCodePoints(1, 0)
+
+                "space" ->
+                    input.commitText(" ", 1)
+
+                "enter" ->
+                    input.commitText("\n", 1)
+
+                "toggle" -> {
+                    persianMode = !persianMode
+                    setInputView(createKeyboard())
+                }
+
+                else ->
+                    input.commitText(key.value, 1)
             }
         }
 
@@ -163,27 +174,75 @@ class ParsicKeyboardService : InputMethodService() {
         )
     }
 
-    override fun onCreateInputView(): android.view.View {
+    private fun createKeyboard(): View {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(3), dp(4), dp(3), dp(4))
             setBackgroundColor(Color.rgb(29, 27, 26))
         }
 
-        rows.forEachIndexed { index, keys ->
+        val rows = listOf(
+            "ض ص ث ق ف غ ع ه خ ح ج چ",
+            "ش س ی ب ل ا ت ن م ک گ",
+            "ظ ط ز ر ذ د ئ و پ"
+        )
+
+        rows.forEachIndexed { index, row ->
+            val keys = row.split(" ").map { letter(it) }.toMutableList()
+
+            if (index == 2) {
+                keys.add(
+                    special("⌫", "حذف", action = "backspace", weight = 1.3f)
+                )
+            }
+
             addRow(root, keys, 47)
         }
 
         val bottom = listOf(
             special("؟۱۲۳", "علائم", "؟"),
             special("،", "ویرگول", "،"),
-            special("فاصله", " ", action = "space", weight = 3.8f),
+            special("⇄", "تغییر زبان", action = "toggle", weight = 1.3f),
+            special("فاصله", "", action = "space", weight = 3.2f),
             special(".", "نقطه", "."),
             special("↵", "ورود", action = "enter")
         )
 
         addRow(root, bottom, 48)
 
+        root.setOnApplyWindowInsetsListener { view, insets ->
+            val bottomInset = if (Build.VERSION.SDK_INT >= 30) {
+                insets.getInsets(
+                    WindowInsets.Type.navigationBars()
+                ).bottom
+            } else {
+                @Suppress("DEPRECATION")
+                insets.systemWindowInsetBottom
+            }
+
+            view.setPadding(
+                dp(3),
+                dp(4),
+                dp(3),
+                bottomInset + dp(4)
+            )
+
+            insets
+        }
+
+        root.requestApplyInsets()
         return root
+    }
+
+    override fun onCreateInputView(): View {
+        window?.window?.let { w ->
+            w.navigationBarColor = Color.rgb(29, 27, 26)
+
+            if (Build.VERSION.SDK_INT >= 29) {
+                w.isNavigationBarContrastEnforced = false
+            }
+        }
+
+        return createKeyboard()
     }
 }
