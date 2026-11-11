@@ -2,6 +2,6 @@
 <input-method xmlns:android="http://schemas.android.com/apk/res/android">
     <subtype
         android:label="پارسیک"
-        android:imeSubtypeLocale="fa_IR"
+        android:imeSubtypeLocale="qps_Xsux"
         android:imeSubtypeMode="keyboard" />
 </input-method>
