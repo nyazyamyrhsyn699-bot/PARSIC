@@ -1,7 +1,11 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-void main() => runApp(const ParsicApp());
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(const ParsicApp());
+}
 
 class ParsicApp extends StatelessWidget {
   const ParsicApp({super.key});
@@ -12,203 +16,384 @@ class ParsicApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'PARSIC',
       theme: ThemeData(
+        useMaterial3: true,
         brightness: Brightness.dark,
         scaffoldBackgroundColor: const Color(0xFF101014),
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFFC69B48),
           brightness: Brightness.dark,
         ),
-        useMaterial3: true,
       ),
-      home: const HomePage(),
+      home: const ParsicHome(),
     );
   }
 }
 
-class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+class ParsicHome extends StatefulWidget {
+  const ParsicHome({super.key});
 
   @override
-  State<HomePage> createState() => _HomePageState();
+  State<ParsicHome> createState() => _ParsicHomeState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _ParsicHomeState extends State<ParsicHome> {
   final input = TextEditingController();
+  final search = TextEditingController();
+
   String output = '';
   String mode = 'فارسی به پارسیک';
+  int page = 0;
 
   static const Map<String, String> alphabet = {
-    'ا':'𐎠','آ':'𐎠','a':'𐎠',
-    'ب':'𐎲','پ':'𐎱',
-    'ت':'𐎫','ث':'𐎰',
-    'ج':'𐎩','چ':'𐎨',
-    'ح':'𐎧','خ':'𐎧',
-    'د':'𐎭','ذ':'𐎰',
-    'ر':'𐎼','ز':'𐎹',
-    'ژ':'𐎹','س':'𐎿',
-    'ش':'𐏁','ص':'𐎿',
-    'ض':'𐎭','ط':'𐎫',
-    'ظ':'𐎹','ع':'𐎠',
-    'غ':'𐎥','ف':'𐎱',
-    'ق':'𐎣','ک':'𐎣',
-    'گ':'𐎥','ل':'𐎴',
-    'م':'𐎶','ن':'𐎴',
-    'و':'𐎢','ه':'𐏃',
-    'ی':'𐎡','ئ':'𐎡',
-    ' ':'  ',
+    'ا':'𐎠','ب':'𐎡','پ':'𐎢','ت':'𐎣',
+    'ث':'𐎤','ج':'𐎥','چ':'𐎦','ح':'𐎧',
+    'خ':'𐎨','د':'𐎩','ذ':'𐎪','ر':'𐎫',
+    'ز':'𐎬','ژ':'𐎭','س':'𐎮','ش':'𐎯',
+    'ص':'𐎰','ض':'𐎱','ط':'𐎲','ظ':'𐎳',
+    'ع':'𐎴','غ':'𐎵','ف':'𐎶','ق':'𐎷',
+    'ک':'𐎸','گ':'𐎹','ل':'𐎺','م':'𐎻',
+    'ن':'𐎼','و':'𐎽','ه':'𐎾','ی':'𐎿',
   };
 
-  String translate(String text) {
-    if (mode == 'فارسی به پارسیک') {
-      return text.split('').map((c) => alphabet[c] ?? c).join();
-    }
+  static const List<Map<String,String>> dictionary = [
+    {'word':'من','meaning':'گوینده؛ شخص اول','category':'ضمیر'},
+    {'word':'تو','meaning':'شنونده؛ شخص دوم','category':'ضمیر'},
+    {'word':'او','meaning':'شخص سوم','category':'ضمیر'},
+    {'word':'ما','meaning':'گروه شامل گوینده','category':'ضمیر'},
+    {'word':'شما','meaning':'گروه شنوندگان','category':'ضمیر'},
+    {'word':'آب','meaning':'مایع زندگی','category':'اسم'},
+    {'word':'آتش','meaning':'عنصر آتش','category':'اسم'},
+    {'word':'زمین','meaning':'سرزمین و خاک','category':'اسم'},
+    {'word':'آسمان','meaning':'فضای بالای زمین','category':'اسم'},
+    {'word':'خورشید','meaning':'ستاره منظومه شمسی','category':'اسم'},
+    {'word':'ماه','meaning':'قمر زمین','category':'اسم'},
+    {'word':'ستاره','meaning':'جرم نورانی آسمان','category':'اسم'},
+    {'word':'خانه','meaning':'محل زندگی','category':'اسم'},
+    {'word':'دوست','meaning':'یار و همراه','category':'اسم'},
+    {'word':'دشمن','meaning':'مخالف و بدخواه','category':'اسم'},
+    {'word':'شاه','meaning':'فرمانروا','category':'اسم'},
+    {'word':'مردم','meaning':'انسان‌ها','category':'اسم'},
+    {'word':'زبان','meaning':'سامانه ارتباطی','category':'اسم'},
+    {'word':'کتاب','meaning':'اثر نوشتاری','category':'اسم'},
+    {'word':'دانش','meaning':'آگاهی و شناخت','category':'اسم'},
+    {'word':'بزرگ','meaning':'دارای اندازه یا اهمیت زیاد','category':'صفت'},
+    {'word':'خوب','meaning':'دارای ویژگی پسندیده','category':'صفت'},
+    {'word':'زیبا','meaning':'دارای زیبایی','category':'صفت'},
+    {'word':'نو','meaning':'تازه','category':'صفت'},
+    {'word':'رفتن','meaning':'حرکت کردن از جایی','category':'فعل'},
+    {'word':'آمدن','meaning':'رسیدن به جایی','category':'فعل'},
+    {'word':'دیدن','meaning':'با چشم مشاهده کردن','category':'فعل'},
+    {'word':'دانستن','meaning':'آگاهی داشتن','category':'فعل'},
+    {'word':'گفتن','meaning':'بیان کردن','category':'فعل'},
+    {'word':'ساختن','meaning':'پدید آوردن','category':'فعل'},
+    {'word':'سلام','meaning':'درود و خوشامدگویی','category':'عبارت'},
+    {'word':'سپاس','meaning':'تشکر','category':'عبارت'},
+    {'word':'بدرود','meaning':'خداحافظی','category':'عبارت'},
+  ];
 
-    final reverse = <String, String>{};
-    alphabet.forEach((key, value) {
-      if (key != ' ') reverse.putIfAbsent(value, () => key);
-    });
+  static const List<Map<String,String>> grammar = [
+    {'title':'ترتیب جمله','rule':'فاعل + مفعول + فعل'},
+    {'title':'جمع','rule':'پسوند پیشنهادی جمع: ان'},
+    {'title':'مالکیت','rule':'پسوند پیشنهادی مالکیت: ی'},
+    {'title':'صفت','rule':'صفت پس از اسم قرار می‌گیرد'},
+    {'title':'جهت نوشتار','rule':'چپ به راست'},
+  ];
 
+  String normalize(String text) {
+    return text
+        .replaceAll('آ','ا')
+        .replaceAll('أ','ا')
+        .replaceAll('إ','ا')
+        .replaceAll('ي','ی')
+        .replaceAll('ى','ی')
+        .replaceAll('ك','ک');
+  }
+
+  String convert(String text) {
+    final normalized = normalize(text);
+    final reverse = {
+      for (final entry in alphabet.entries) entry.value: entry.key
+    };
+
+    final runes = normalized.runes;
     final result = StringBuffer();
-    for (int i = 0; i < text.length;) {
-      if (text.startsWith('  ', i)) {
-        result.write(' ');
-        i += 2;
+
+    for (final rune in runes) {
+      final char = String.fromCharCode(rune);
+
+      if (mode == 'فارسی به پارسیک') {
+        result.write(alphabet[char] ?? char);
       } else {
-        final sign = text.substring(i, i + 1);
-        result.write(reverse[sign] ?? sign);
-        i++;
+        result.write(reverse[char] ?? char);
       }
     }
     return result.toString();
   }
 
-  void convert() {
-    setState(() => output = translate(input.text));
+  void translate() {
+    setState(() => output = convert(input.text));
   }
 
-  static const platform = MethodChannel('parsic/keyboard');
+  Future<void> copyOutput() async {
+    if (output.isEmpty) return;
+    await Clipboard.setData(ClipboardData(text: output));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('متن کپی شد')),
+    );
+  }
 
   Future<void> openKeyboard() async {
     try {
-      await platform.invokeMethod('openKeyboard');
-    } catch (_) {}
+      await const MethodChannel('parsic/keyboard')
+          .invokeMethod('openKeyboard');
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('صفحه‌کلید در دسترس نیست')),
+      );
+    }
+  }
+
+  Widget translatorPage() {
+    return ListView(
+      padding: const EdgeInsets.all(18),
+      children: [
+        const SizedBox(height: 8),
+        const Text(
+          '𐎱𐎠𐎼𐎿𐎡𐎣',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 42, color: Color(0xFFD5AC5B)),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'زبان پارسیک',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'PARSIC LANGUAGE PROJECT',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.amber, letterSpacing: 2),
+        ),
+        const SizedBox(height: 25),
+        DropdownButtonFormField<String>(
+          value: mode,
+          decoration: const InputDecoration(
+            labelText: 'جهت تبدیل',
+            border: OutlineInputBorder(),
+          ),
+          items: const [
+            DropdownMenuItem(
+              value: 'فارسی به پارسیک',
+              child: Text('فارسی به پارسیک'),
+            ),
+            DropdownMenuItem(
+              value: 'پارسیک به فارسی',
+              child: Text('پارسیک به فارسی'),
+            ),
+          ],
+          onChanged: (value) {
+            setState(() {
+              mode = value!;
+              output = '';
+            });
+          },
+        ),
+        const SizedBox(height: 18),
+        TextField(
+          controller: input,
+          maxLines: 5,
+          textDirection: TextDirection.rtl,
+          decoration: const InputDecoration(
+            labelText: 'متن ورودی',
+            hintText: 'متن را وارد کنید...',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        const SizedBox(height: 12),
+        FilledButton.icon(
+          onPressed: translate,
+          icon: const Icon(Icons.translate),
+          label: const Padding(
+            padding: EdgeInsets.all(12),
+            child: Text('تبدیل متن'),
+          ),
+        ),
+        const SizedBox(height: 18),
+        Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: const Color(0xFF202027),
+            borderRadius: BorderRadius.circular(15),
+            border: Border.all(color: Colors.amber.shade700),
+          ),
+          child: Column(
+            children: [
+              const Text('خروجی پارسیک'),
+              const SizedBox(height: 18),
+              SelectableText(
+                output.isEmpty ? '𐎱𐎠𐎼𐎿𐎡𐎣' : output,
+                textDirection: TextDirection.ltr,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 30),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: copyOutput,
+                icon: const Icon(Icons.copy),
+                label: const Text('کپی خروجی'),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 18),
+        OutlinedButton.icon(
+          onPressed: openKeyboard,
+          icon: const Icon(Icons.keyboard),
+          label: const Text('انتخاب صفحه‌کلید پارسیک'),
+        ),
+        const SizedBox(height: 12),
+        const Text(
+          'توجه: تبدیل حروف، آوانویسی آزمایشی است و ترجمه معنایی کامل زبان نیست.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.grey, fontSize: 12),
+        ),
+      ],
+    );
+  }
+
+  Widget dictionaryPage() {
+    final query = search.text.trim();
+    final items = dictionary.where((item) {
+      return item['word']!.contains(query) ||
+          item['meaning']!.contains(query);
+    }).toList();
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: TextField(
+            controller: search,
+            onChanged: (_) => setState(() {}),
+            decoration: const InputDecoration(
+              prefixIcon: Icon(Icons.search),
+              hintText: 'جست‌وجو در فرهنگ لغت...',
+              border: OutlineInputBorder(),
+            ),
+          ),
+        ),
+        Expanded(
+          child: ListView.builder(
+            itemCount: items.length,
+            itemBuilder: (context, index) {
+              final item = items[index];
+              return Card(
+                child: ListTile(
+                  title: Text(
+                    item['word']!,
+                    style: const TextStyle(fontSize: 19),
+                  ),
+                  subtitle: Text(item['meaning']!),
+                  trailing: Text(item['category']!),
+                  onTap: () {
+                    setState(() {
+                      input.text = item['word']!;
+                      page = 0;
+                    });
+                  },
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget alphabetPage() {
+    return ListView(
+      padding: const EdgeInsets.all(18),
+      children: [
+        const Text(
+          'الفبای پارسیک',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 25),
+        ),
+        const SizedBox(height: 20),
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 8,
+          runSpacing: 8,
+          children: alphabet.entries.map((entry) {
+            return Container(
+              width: 76,
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF29272A),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.amber.shade700),
+              ),
+              child: Column(
+                children: [
+                  Text(entry.value, style: const TextStyle(fontSize: 30)),
+                  Text(entry.key, style: const TextStyle(fontSize: 16)),
+                ],
+              ),
+            );
+          }).toList(),
+        ),
+        const SizedBox(height: 25),
+        const Text(
+          'قواعد پایه زبان',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 22),
+        ),
+        const SizedBox(height: 12),
+        ...grammar.map((item) => Card(
+          child: ListTile(
+            title: Text(item['title']!),
+            subtitle: Text(item['rule']!),
+          ),
+        )),
+      ],
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final pages = [
+      translatorPage(),
+      dictionaryPage(),
+      alphabetPage(),
+    ];
+
     return Scaffold(
       appBar: AppBar(
         title: const Text(
           '𐎱𐎠𐎼𐎿𐎡𐎣  PARSIC',
-          style: TextStyle(
-            color: Color(0xFFD5AC5B),
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: Color(0xFFD5AC5B)),
         ),
         centerTitle: true,
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          const SizedBox(height: 15),
-          const Text(
-            'زبان اختصاصی پارسیک',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold),
+      body: pages[page],
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: page,
+        onDestinationSelected: (value) => setState(() => page = value),
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.translate),
+            label: 'مترجم',
           ),
-          const SizedBox(height: 8),
-          const Text(
-            'A NEW LANGUAGE INSPIRED BY OLD PERSIAN',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.amber, fontSize: 11),
+          NavigationDestination(
+            icon: Icon(Icons.menu_book),
+            label: 'فرهنگ لغت',
           ),
-          const SizedBox(height: 30),
-          DropdownButtonFormField<String>(
-            value: mode,
-            decoration: const InputDecoration(
-              labelText: 'جهت ترجمه',
-              border: OutlineInputBorder(),
-            ),
-            items: const [
-              DropdownMenuItem(
-                value: 'فارسی به پارسیک',
-                child: Text('فارسی به پارسیک'),
-              ),
-              DropdownMenuItem(
-                value: 'پارسیک به فارسی',
-                child: Text('پارسیک به فارسی'),
-              ),
-            ],
-            onChanged: (v) {
-              setState(() {
-                mode = v!;
-                output = '';
-              });
-            },
-          ),
-          const SizedBox(height: 20),
-          TextField(
-            controller: input,
-            maxLines: 5,
-            textDirection: TextDirection.rtl,
-            decoration: const InputDecoration(
-              hintText: 'متن خود را وارد کنید...',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 15),
-          FilledButton(
-            onPressed: convert,
-            child: const Padding(
-              padding: EdgeInsets.all(12),
-              child: Text('ترجمه کن'),
-            ),
-          ),
-          const SizedBox(height: 20),
-          Container(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: const Color(0xFF202027),
-              borderRadius: BorderRadius.circular(15),
-              border: Border.all(color: Colors.amber.shade700),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Text('نتیجه ترجمه'),
-                const SizedBox(height: 15),
-                SelectableText(
-                  output.isEmpty ? '𐎱𐎠𐎼𐎿𐎡𐎣' : output,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 28),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-          OutlinedButton.icon(
-            onPressed: openKeyboard,
-            icon: const Icon(Icons.keyboard),
-            label: const Text('فعال‌سازی صفحه‌کلید پارسیک'),
-          ),
-          const SizedBox(height: 25),
-          const Text(
-            'الفبای پارسیک',
-            style: TextStyle(fontSize: 18),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 15),
-          const Text(
-            '𐎠 𐎡 𐎢 𐎣 𐎥 𐎧 𐎩 𐎫 '
-            '𐎭 𐎱 𐎲 𐎼 𐎿 𐏁 𐏃 𐎴 𐎶',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 27),
-          ),
-          const SizedBox(height: 25),
-          const Text(
-            'نسخه آزمایشی 1.0',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey),
+          NavigationDestination(
+            icon: Icon(Icons.abc),
+            label: 'الفبا و قواعد',
           ),
         ],
       ),

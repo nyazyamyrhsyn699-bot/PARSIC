@@ -27,18 +27,23 @@ jobs:
       - name: Create Android project
         run: flutter create --org com.parsic --project-name parsic --platforms android .
 
-      - name: Install native keyboard
+      - name: Install PARSIC keyboard
         run: |
           mkdir -p android/app/src/main/res/xml
           mkdir -p android/app/src/main/kotlin/com/parsic/parsic
-          cp native/kotlin/ParsicKeyboardService.kt android/app/src/main/kotlin/com/parsic/parsic/
 
-          cp native/res/xml/method.xml android/app/src/main/res/xml/method.xml
+          cp native/kotlin/ParsicKeyboardService.kt \
+            android/app/src/main/kotlin/com/parsic/parsic/
+
+          cp native/res/xml/method.xml \
+            android/app/src/main/res/xml/method.xml
 
           python3 - <<'PY'
           from pathlib import Path
+
           p = Path("android/app/src/main/AndroidManifest.xml")
           s = p.read_text()
+
           service = '''
               <service
                   android:name="com.parsic.parsic.ParsicKeyboardService"
@@ -53,16 +58,16 @@ jobs:
                       android:resource="@xml/method" />
               </service>
           '''
-          s = s.replace("</application>", service + "\n</application>")
-          p.write_text(s)
-          PY
 
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path("android/app/src/main/kotlin/com/parsic/parsic/MainActivity.kt")
-          p.parent.mkdir(parents=True, exist_ok=True)
-          p.write_text("""
-          package com.parsic.parsic
+          if "ParsicKeyboardService" not in s:
+              s = s.replace("</application>", service + "\\n</application>")
+
+          p.write_text(s)
+
+          main = Path("android/app/src/main/kotlin/com/parsic/parsic/MainActivity.kt")
+          main.parent.mkdir(parents=True, exist_ok=True)
+
+          main.write_text('''package com.parsic.parsic
 
           import android.content.Context
           import android.view.inputmethod.InputMethodManager
@@ -73,29 +78,33 @@ jobs:
           class MainActivity: FlutterActivity() {
               override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
                   super.configureFlutterEngine(flutterEngine)
-                  MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "parsic/keyboard")
-                      .setMethodCallHandler { call, result ->
-                          if (call.method == "openKeyboard") {
-                              val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-                              imm.showInputMethodPicker()
-                              result.success(true)
-                          } else {
-                              result.notImplemented()
-                          }
+                  MethodChannel(
+                      flutterEngine.dartExecutor.binaryMessenger,
+                      "parsic/keyboard"
+                  ).setMethodCallHandler { call, result ->
+                      if (call.method == "openKeyboard") {
+                          val imm = getSystemService(
+                              Context.INPUT_METHOD_SERVICE
+                          ) as InputMethodManager
+                          imm.showInputMethodPicker()
+                          result.success(true)
+                      } else {
+                          result.notImplemented()
                       }
+                  }
               }
           }
-          """.replace("package com.parsic.parsic", "package com.parsic.parsic"))
+          ''')
           PY
 
-          sed -i 's#com/pars ic#com/parsic#g' android/app/src/main/kotlin/com/parsic/parsic/MainActivity.kt || true
-
-      - name: Build APK
+      - name: Build release APK
         run: |
           flutter pub get
+          flutter analyze
           flutter build apk --release
 
       - uses: actions/upload-artifact@v4
         with:
           name: PARSIC-Android-APK
           path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error

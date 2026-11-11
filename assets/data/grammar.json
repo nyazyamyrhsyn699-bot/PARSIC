@@ -1,0 +1,35 @@
+{
+  "name":"PARSIC",
+  "version":"2.0",
+  "writingSystem":"PARSIC Cuneiform Inspired",
+  "script":"Xsux",
+  "direction":"ltr",
+  "wordOrder":"SOV",
+  "rules":[
+    {
+      "title":"ترتیب جمله",
+      "rule":"فاعل + مفعول + فعل",
+      "example":"من کتاب می‌خوانم"
+    },
+    {
+      "title":"جمع",
+      "rule":"پسوند پیشنهادی جمع: ان",
+      "example":"دوست ← دوستان"
+    },
+    {
+      "title":"مالکیت",
+      "rule":"پسوند پیشنهادی مالکیت: ی",
+      "example":"خانه ← خانه‌ی من"
+    },
+    {
+      "title":"صفت",
+      "rule":"صفت پس از اسم قرار می‌گیرد",
+      "example":"خانه بزرگ"
+    },
+    {
+      "title":"جهت نوشتار",
+      "rule":"چپ به راست",
+      "example":"PARSIC"
+    }
+  ]
+}

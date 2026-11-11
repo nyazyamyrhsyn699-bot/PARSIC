@@ -15,8 +15,8 @@ class ParsicKeyboardService : InputMethodService() {
         listOf("𐎬","𐎭","𐎮","𐎯","𐎰","𐎱"),
         listOf("𐎲","𐎳","𐎴","𐎵","𐎶","𐎷"),
         listOf("𐎸","𐎹","𐎺","𐎻","𐎼","𐎽"),
-        listOf("𐎾","𐎿","𐏀","𐏁","𐏂","𐏃"),
-        listOf("⌫","،",".","؟","فاصله","↵")
+        listOf("𐎾","𐎿","⌫","،",".","؟"),
+        listOf("فاصله","↵")
     )
 
     override fun onCreateInputView(): View {
@@ -34,18 +34,16 @@ class ParsicKeyboardService : InputMethodService() {
             for (key in row) {
                 val button = Button(this).apply {
                     text = key
-                    textSize = if (key == "فاصله") 12f else 22f
+                    textSize = if (key == "فاصله") 12f else 21f
                     setTextColor(Color.WHITE)
                     setBackgroundColor(Color.rgb(75,62,43))
                     isAllCaps = false
                     setPadding(0,0,0,0)
                 }
 
-                val params = LinearLayout.LayoutParams(
-                    0, 48, 1f
-                )
+                val params = LinearLayout.LayoutParams(0,48,1f)
                 params.setMargins(2,2,2,2)
-                line.addView(button, params)
+                line.addView(button,params)
 
                 button.setOnClickListener {
                     val connection = currentInputConnection ?: return@setOnClickListener
